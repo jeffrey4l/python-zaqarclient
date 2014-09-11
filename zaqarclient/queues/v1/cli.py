@@ -23,7 +23,7 @@ from openstackclient.common import utils
 
 
 class CreateQueues(show.ShowOne):
-    """List available queues."""
+    """Create a Queue."""
 
     log = logging.getLogger(__name__ + ".CreateQueues")
 
@@ -47,7 +47,7 @@ class CreateQueues(show.ShowOne):
 
 
 class DeleteQueues(command.Command):
-    """List available queues."""
+    """Delete a Queue."""
 
     log = logging.getLogger(__name__ + ".DeleteQueues")
 
