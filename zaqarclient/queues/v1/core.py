@@ -258,7 +258,9 @@ def message_get_many(transport, request, queue_name, messages, callback=None):
 
     request.operation = 'message_get_many'
     request.params['queue_name'] = queue_name
-    request.params['ids'] = messages
+    # FIXME(jeffrey4l): fix when the falcon support repeated query param field.
+    # The related issue is https://github.com/racker/falcon/issues/312
+    request.params['ids'] = ','.join(messages)
 
     resp = transport.send(request)
     return resp.deserialized_content
