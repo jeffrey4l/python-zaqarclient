@@ -94,6 +94,8 @@ class _Iterator(object):
         raise StopIteration
 
     def __next__(self):
+        if self._listing_response is None:
+            raise StopIteration
         try:
             args = self._listing_response.pop(0)
         except IndexError:

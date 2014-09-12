@@ -155,7 +155,7 @@ class TestV1Core(base.TestBase):
 
             self.assertIn('queue_name', req.params)
             self.assertIn('ids', req.params)
-            self.assertEqual(ids, req.params['ids'])
+            self.assertEqual("a,b", req.params['ids'])
 
     def test_message_get(self):
         with mock.patch.object(self.transport, 'send',
