@@ -20,6 +20,7 @@ from cliff import lister
 from cliff import show
 
 from openstackclient.common import utils
+from zaqarclient.transport import errors
 
 
 class CreateQueue(show.ShowOne):
@@ -225,3 +226,191 @@ class GetQueueStats(show.ShowOne):
         columns = ("Stats",)
         data = dict(stats=queue.stats)
         return columns, utils.get_dict_properties(data, columns)
+
+
+class PostMessage(show.ShowOne):
+    """Create a message in the queue."""
+
+    log = logging.getLogger(__name__ + ".PostMessage")
+
+    def get_parser(self, prog_name):
+        parser = super(PostMessage, self).get_parser(prog_name)
+        parser.add_argument(
+            "--queue_name",
+            metavar="<queue_name>",
+            required=True,
+            help="Name of the queue")
+        parser.add_argument(
+            "--ttl",
+            metavar="<ttl>",
+            required=True,
+            type=int,
+            help=("Number of seconds the message will be available"
+                  " in the server"))
+        parser.add_argument(
+            "--body",
+            metavar="<body>",
+            required=True,
+            help="")
+        return parser
+
+    def take_action(self, parsed_args):
+        self.log.debug("take_action(%s)" % parsed_args)
+
+        client = self.app.client_manager.messaging
+
+        queue_name = parsed_args.queue_name
+        queue = client.queue(queue_name, auto_create=False)
+
+        if not queue.exists():
+            raise RuntimeError("Queue(%s) does not exist." % queue_name)
+
+        message = {
+            "ttl": parsed_args.ttl,
+            "body": parsed_args.body
+        }
+
+        message_ref = queue.post(message)
+
+        columns = ("Resources",)
+        return columns, utils.get_dict_properties(message_ref, columns)
+
+
+class ListMessages(lister.Lister):
+    """List messages in the queue."""
+
+    log = logging.getLogger(__name__ + ".ListMessages")
+
+    def get_parser(self, prog_name):
+        parser = super(ListMessages, self).get_parser(prog_name)
+        parser.add_argument(
+            "--queue_name",
+            metavar="<queue_name>",
+            required=True,
+            help="Name of the queue")
+        parser.add_argument(
+            "--marker",
+            metavar="<message_id>",
+            help="Message's paging marker")
+        parser.add_argument(
+            "--limit",
+            metavar="<limit>",
+            type=int,
+            help="Page size limit")
+        parser.add_argument(
+            "--echo",
+            action="store_true",
+            default=False,
+            help="Whether or not return the client's own messages")
+        parser.add_argument(
+            "--include-claimed",
+            action="store_true",
+            default=False,
+            help="Whether or not return claimed messages")
+
+        return parser
+
+    def take_action(self, parsed_args):
+        self.log.debug("take_action(%s)" % parsed_args)
+
+        client = self.app.client_manager.messaging
+
+        kwargs = {}
+        if parsed_args.marker is not None:
+            kwargs["marker"] = parsed_args.marker
+        if parsed_args.limit is not None:
+            kwargs["limit"] = parsed_args.limit
+        if parsed_args.echo:
+            kwargs["echo"] = True
+        if parsed_args.include_claimed:
+            kwargs["include_claimed"] = True
+
+        queue_name = parsed_args.queue_name
+        queue = client.queue(queue_name, auto_create=False)
+
+        if not queue.exists():
+            raise RuntimeError("Queue(%s) does not exist." % queue_name)
+
+        messages = queue.messages(**kwargs)
+        columns = ("ID", "TTL", "Age")
+
+        return (columns,
+                (utils.get_item_properties(m, columns) for m in messages))
+
+
+class GetMessagesById(lister.Lister):
+    """Get Messages by id."""
+
+    log = logging.getLogger(__name__ + ".GetMessagesSetById")
+
+    def get_parser(self, prog_name):
+        parser = super(GetMessagesById, self).get_parser(prog_name)
+        parser.add_argument(
+            "--queue_name",
+            metavar="<queue_name>",
+            required=True,
+            help="Name of the queue")
+        parser.add_argument(
+            "message_ids",
+            metavar="<message_ids>",
+            nargs="+",
+            help="Id set of the message")
+        return parser
+
+    def take_action(self, parsed_args):
+        self.log.debug("take_action(%s)" % parsed_args)
+
+        client = self.app.client_manager.messaging
+
+        queue_name = parsed_args.queue_name
+        queue = client.queue(queue_name, auto_create=False)
+
+        if not queue.exists():
+            raise RuntimeError("Queue(%s) does not exist." % queue_name)
+
+        try:
+            messages = queue.messages(*parsed_args.message_ids)
+            columns = ("ID", "TTL", "Age", "Body", "Href")
+            return (columns,
+                    (utils.get_item_properties(message, columns)
+                     for message in messages))
+        except errors.ResourceNotFound:
+            raise RuntimeError("Message(%s) does not found." %
+                               parsed_args.message_id)
+
+
+class DeleteMessagesById(command.Command):
+    """Delete message by id."""
+
+    log = logging.getLogger(__name__ + ".DeleteMessageById")
+
+    def get_parser(self, prog_name):
+        parser = super(DeleteMessagesById, self).get_parser(prog_name)
+        parser.add_argument(
+            "--queue_name",
+            metavar="<queue_name>",
+            required=True,
+            help="Name of the queue")
+        parser.add_argument(
+            "message_id",
+            metavar="<message_id>",
+            nargs="+",
+            help="Id of the message")
+        return parser
+
+    def take_action(self, parsed_args):
+        self.log.debug("take_action(%s)" % parsed_args)
+
+        client = self.app.client_manager.messaging
+
+        queue_name = parsed_args.queue_name
+        queue = client.queue(queue_name, auto_create=False)
+
+        if not queue.exists():
+            raise RuntimeError("Queue(%s) does not exist." % queue_name)
+
+        try:
+            queue.delete_messages(*parsed_args.message_id)
+        except errors.ResourceNotFound:
+            raise RuntimeError("Message(%s) does not found." %
+                               parsed_args.message_id)

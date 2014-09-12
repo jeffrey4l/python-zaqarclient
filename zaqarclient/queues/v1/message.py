@@ -44,6 +44,10 @@ class Message(object):
                                                     ttl=self.ttl)
 
     @property
+    def id(self):
+        return self._id
+
+    @property
     def claim_id(self):
         if '=' in self.href:
             return self.href.split('=')[-1]
