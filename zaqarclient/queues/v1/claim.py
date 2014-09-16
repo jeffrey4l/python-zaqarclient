@@ -86,6 +86,10 @@ class Claim(object):
             self._get()
         return self._ttl
 
+    @property
+    def messages(self):
+        return list(self)
+
     def delete(self):
         req, trans = self._queue.client._request_and_transport()
         core.claim_delete(trans, req, self._queue._name, self.id)

@@ -414,3 +414,175 @@ class DeleteMessagesById(command.Command):
         except errors.ResourceNotFound:
             raise RuntimeError("Message(%s) does not found." %
                                parsed_args.message_id)
+
+
+class CreateClaim(show.ShowOne):
+    """Claim messages."""
+
+    log = logging.getLogger(__name__ + ".CreateClaim")
+
+    def get_parser(self, prog_name):
+        parser = super(CreateClaim, self).get_parser(prog_name)
+        parser.add_argument(
+            "--queue_name",
+            metavar="<queue_name>",
+            required=True,
+            help="Name of the queue")
+        parser.add_argument(
+            "--limit",
+            metavar="<limit>",
+            type=int,
+            help="Page size limit.")
+        parser.add_argument(
+            "--ttl",
+            metavar="<ttl>",
+            type=int,
+            required=True,
+            help="How long the server should wait before releasing the claim")
+        parser.add_argument(
+            "--grace",
+            metavar="<grace>",
+            type=int,
+            help="Message grace period in seconds")
+        return parser
+
+    def take_action(self, parsed_args):
+        self.log.debug("take_action(%s)" % parsed_args)
+
+        client = self.app.client_manager.messaging
+
+        queue_name = parsed_args.queue_name
+        queue = client.queue(queue_name, auto_create=False)
+
+        if not queue.exists():
+            raise RuntimeError("Queue(%s) does not exist." % queue_name)
+
+        claim = queue.claim(ttl=parsed_args.ttl,
+                            grace=parsed_args.grace,
+                            limit=parsed_args.limit)
+        columns = ("id", 'ttl', 'age')
+        if claim.id is None:
+            # NOTE(jeffrey4l): When the id is None, it means there is no
+            # unclaimed messages are available. So just return empty
+            return (columns, ())
+        else:
+            return columns, utils.get_item_properties(claim, columns)
+
+
+class QueryClaim(show.ShowOne):
+    """Query claim."""
+
+    log = logging.getLogger(__name__ + ".QueryClaim")
+
+    def get_parser(self, prog_name):
+        parser = super(QueryClaim, self).get_parser(prog_name)
+        parser.add_argument(
+            "--queue_name",
+            metavar="<queue_name>",
+            required=True,
+            help="Name of the queue")
+        parser.add_argument(
+            "id",
+            metavar="<id>",
+            help="Id of the claim")
+        return parser
+
+    def take_action(self, parsed_args):
+        self.log.debug("take_action(%s)" % parsed_args)
+
+        client = self.app.client_manager.messaging
+
+        queue_name = parsed_args.queue_name
+        queue = client.queue(queue_name, auto_create=False)
+
+        if not queue.exists():
+            raise RuntimeError("Queue(%s) does not exist." % queue_name)
+
+        try:
+            claim = queue.claim(id=parsed_args.id)
+            columns = ("id", 'ttl', 'age', "messages")
+            return columns, utils.get_item_properties(claim, columns)
+        except errors.ResourceNotFound:
+            raise RuntimeError("Claim(%s) does not exist." % parsed_args.id)
+
+
+class UpdateClaim(command.Command):
+    """Update claim."""
+
+    log = logging.getLogger(__name__ + ".UpdateClaim")
+
+    def get_parser(self, prog_name):
+        parser = super(UpdateClaim, self).get_parser(prog_name)
+        parser.add_argument(
+            "--queue_name",
+            metavar="<queue_name>",
+            required=True,
+            help="Name of the queue")
+        parser.add_argument(
+            "id",
+            metavar="<id>",
+            help="Id of the claim")
+        parser.add_argument(
+            "--ttl",
+            metavar="<ttl>",
+            type=int,
+            required=True,
+            help=("Number of seconds the server will be wait before"
+                  " releasing the claim"))
+        return parser
+
+    def take_action(self, parsed_args):
+        self.log.debug("take_action(%s)" % parsed_args)
+
+        client = self.app.client_manager.messaging
+
+        queue_name = parsed_args.queue_name
+        queue = client.queue(queue_name, auto_create=False)
+
+        if not queue.exists():
+            raise RuntimeError("Queue(%s) does not exist." % queue_name)
+
+        try:
+            claim = queue.claim(id=parsed_args.id)
+            claim.update(ttl=parsed_args.ttl)
+        except errors.ResourceNotFound:
+            raise RuntimeError("Claim(%s) does not exist." % parsed_args.id)
+
+
+class ReleaseClaim(command.Command):
+    """Release claim."""
+
+    log = logging.getLogger(__name__ + ".ReleaseClaim")
+
+    def get_parser(self, prog_name):
+        parser = super(ReleaseClaim, self).get_parser(prog_name)
+        parser.add_argument(
+            "--queue_name",
+            metavar="<queue_name>",
+            required=True,
+            help="Name of the queue")
+        parser.add_argument(
+            "id",
+            metavar="<id>",
+            help="Id of the claim")
+        return parser
+
+    def take_action(self, parsed_args):
+        self.log.debug("take_action(%s)" % parsed_args)
+
+        client = self.app.client_manager.messaging
+
+        queue_name = parsed_args.queue_name
+        queue = client.queue(queue_name, auto_create=False)
+
+        if not queue.exists():
+            raise RuntimeError("Queue(%s) does not exist." % queue_name)
+
+        try:
+            claim = queue.claim(id=parsed_args.id)
+            # NOTE(jeffrey4l) call the _get() method to test whether the
+            # claim exists.
+            claim._get()
+            claim.delete()
+        except errors.ResourceNotFound:
+            raise RuntimeError("Claim(%s) does not exist." % parsed_args.id)
