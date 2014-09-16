@@ -496,3 +496,159 @@ class DeleteMessagesSetById(command.Command):
         except errors.ResourceNotFound:
             raise RuntimeError("Message(%s) does not found." %
                                parsed_args.message_id)
+
+
+class CreateClaim(show.ShowOne):
+    """Claim messages."""
+
+    log = logging.getLogger(__name__ + ".CreateClaim")
+
+    def get_parser(self, prog_name):
+        parser = super(CreateClaim, self).get_parser(prog_name)
+        parser.add_argument(
+            "--queue_name",
+            metavar="<queue_name>",
+            required=True,
+            help="Name of the queue")
+        parser.add_argument(
+            "--limit",
+            metavar="<limit>",
+            type=int,
+            help="Page size limit.")
+        parser.add_argument(
+            "--ttl",
+            metavar="<ttl>",
+            type=int,
+            required=True,
+            help="How long the server should wait before releasing the claim")
+        parser.add_argument(
+            "--grace",
+            metavar="<grace>",
+            type=int,
+            help="Message grace period in seconds")
+        return parser
+
+    def take_action(self, parsed_args):
+        self.log.debug("take_action(%s)" % parsed_args)
+
+        client = self.app.client_manager.queuing
+
+        queue_name = parsed_args.queue_name
+        queue = client.queue(queue_name)
+
+        if not queue.exists():
+            raise RuntimeError("Queue(%s) does not exist." % queue_name)
+
+        claim = queue.claim(ttl=parsed_args.ttl,
+                            grace=parsed_args.grace,
+                            limit=parsed_args.limit)
+
+        columns = ("id", 'ttl', 'age', "grace")
+        return columns, utils.get_item_properties(claim, columns)
+
+
+class QueryClaim(show.ShowOne):
+    """Query claim."""
+
+    log = logging.getLogger(__name__ + ".QueryClaim")
+
+    def get_parser(self, prog_name):
+        parser = super(QueryClaim, self).get_parser(prog_name)
+        parser.add_argument(
+            "--queue_name",
+            metavar="<queue_name>",
+            required=True,
+            help="Name of the queue")
+        parser.add_argument(
+            "id",
+            metavar="<id>",
+            help="Id of the claim")
+        return parser
+
+    def take_action(self, parsed_args):
+        self.log.debug("take_action(%s)" % parsed_args)
+
+        client = self.app.client_manager.queuing
+
+        queue_name = parsed_args.queue_name
+        queue = client.queue(queue_name)
+
+        if not queue.exists():
+            raise RuntimeError("Queue(%s) does not exist." % queue_name)
+
+        claim = queue.claim(id=parsed_args.id)
+        columns = ("id", 'ttl', 'age', "messages")
+        return columns, utils.get_item_properties(claim, columns)
+
+
+class UpdateClaim(command.Command):
+    """Update claim."""
+
+    log = logging.getLogger(__name__ + ".UpdateClaim")
+
+    def get_parser(self, prog_name):
+        parser = super(UpdateClaim, self).get_parser(prog_name)
+        parser.add_argument(
+            "--queue_name",
+            metavar="<queue_name>",
+            required=True,
+            help="Name of the queue")
+        parser.add_argument(
+            "id",
+            metavar="<id>",
+            help="Id of the claim")
+        parser.add_argument(
+            "--ttl",
+            metavar="<ttl>",
+            type=int,
+            required=True,
+            help="How long the server should wait before releasing the claim")
+        return parser
+
+    def take_action(self, parsed_args):
+        self.log.debug("take_action(%s)" % parsed_args)
+
+        client = self.app.client_manager.queuing
+
+        queue_name = parsed_args.queue_name
+        queue = client.queue(queue_name)
+
+        if not queue.exists():
+            raise RuntimeError("Queue(%s) does not exist." % queue_name)
+
+        claim = queue.claim(id=parsed_args.id)
+        # TODO(jeffrey4l): Could the grace field be updated?
+        claim.update(ttl=parsed_args.ttl)
+
+
+class ReleaseClaim(command.Command):
+    """Release claim."""
+
+    log = logging.getLogger(__name__ + ".ReleaseClaim")
+
+    def get_parser(self, prog_name):
+        parser = super(ReleaseClaim, self).get_parser(prog_name)
+        parser.add_argument(
+            "--queue_name",
+            metavar="<queue_name>",
+            required=True,
+            help="Name of the queue")
+        parser.add_argument(
+            "id",
+            metavar="<id>",
+            help="Id of the claim")
+        return parser
+
+    def take_action(self, parsed_args):
+        self.log.debug("take_action(%s)" % parsed_args)
+
+        client = self.app.client_manager.queuing
+
+        queue_name = parsed_args.queue_name
+        queue = client.queue(queue_name)
+
+        if not queue.exists():
+            raise RuntimeError("Queue(%s) does not exist." % queue_name)
+
+        claim = queue.claim(id=parsed_args.id)
+        claim.delete()
