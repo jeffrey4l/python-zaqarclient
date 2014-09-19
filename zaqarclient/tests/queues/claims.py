@@ -84,7 +84,7 @@ class QueueV1ClaimUnitTest(base.QueuesTestBase):
             resp = response.Response(None, None)
             send_method.return_value = resp
 
-            self.queue.claim(id='5245432').update(ttl=444, grace=987)
+            self.queue.claim(id='5245432').update(ttl=444)
 
             # NOTE(asalkeld): Nothing to assert here,
             # just checking our way down to the transport

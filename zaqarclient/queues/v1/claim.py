@@ -90,18 +90,14 @@ class Claim(object):
         req, trans = self._queue.client._request_and_transport()
         core.claim_delete(trans, req, self._queue._name, self.id)
 
-    def update(self, ttl=None, grace=None):
+    def update(self, ttl=None):
         req, trans = self._queue.client._request_and_transport()
         kwargs = {}
         if ttl is not None:
             kwargs['ttl'] = ttl
-        if grace is not None:
-            kwargs['grace'] = grace
         res = core.claim_update(trans, req, self._queue._name, self.id,
                                 **kwargs)
         # if the update succeeds, update our attributes.
         if ttl is not None:
             self._ttl = ttl
-        if grace is not None:
-            self._grace = grace
         return res
