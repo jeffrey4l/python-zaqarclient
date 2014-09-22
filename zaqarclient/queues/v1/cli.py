@@ -531,3 +531,66 @@ class ReleaseClaim(command.Command, QueueMixin):
         claim = self.get_claim_by_id(parsed_args.queue_name,
                                      parsed_args.id)
         claim.delete()
+
+
+class CreatePool(show.ShowOne, QueueMixin):
+    """Create pool."""
+
+    log =  logging.getLogger(__name__ + ".CreatePool")
+
+    def get_parser(self, prog_name):
+        parser = super(CreatePool, self).get_parser(prog_name)
+        parser.add_argument(
+            "pool_name",
+            metavar="<pool_name>",
+            help="The name of the storage pool entry")
+        parser.add_argument(
+            "--weight",
+            metavar="<weight>",
+            type=int,
+            help="")
+        parser.add_argument(
+            "--uri",
+            metavar="<uri>",
+            help="")
+        parser.add_argument(
+            "--options",
+            metavar="<options>",
+            help="")
+        return parser
+
+    def take_action(self, parsed_args):
+        self.log.debug("take_action(%s)" % parsed_args)
+
+        kwargs = {'auto_create': True}
+        if parsed_args.weight is not None:
+            kwargs['weight'] = parsed_args.weight
+        if parsed_args.uri is not None:
+            kwargs['uri'] = parsed_args.uri
+        if parsed_args.options is not None:
+            kwargs['options'] = parsed_args.options
+
+        pool = self.get_client().pool(parsed_args.pool_name,
+                                      **kwargs)
+        columns = ('name', 'weight', 'uri', 'options')
+        return columns, utils.get_item_properties(pool, columns)
+
+
+class GetPoolInfo(show.ShowOne, QueueMixin):
+    def take_action(self, parsed_args):
+        pass
+
+
+class DeletePool(command.Command, QueueMixin):
+    def take_action(self, parsed_args):
+        pass
+
+
+class ListPools(lister.Lister, QueueMixin):
+
+    def get_parser(self, prog_name):
+        parser = super(ListPools, self).get_parser(prog_name)
+        return parser
+
+    def take_action(self, parsed_args):
+        pass
