@@ -213,6 +213,45 @@ class TestV1Core(base.TestBase):
             req = request.Request()
             core.pool_delete(self.transport, req, 'test_pool')
 
+    def test_pool_get(self):
+        with mock.patch.object(self.transport, 'send',
+                               autospec=True) as send_method:
+            resp = response.Response(None, None)
+            send_method.return_value = resp
+
+            req = request.Request()
+            core.pool_get(self.transport, req, 'test_pool', detail=True)
+
+            self.assertTrue(req.params['detail'])
+            self.assertEqual('test_pool', req.params['pool_name'])
+
+    def test_pool_update(self):
+        with mock.patch.object(self.transport, 'send',
+                               autospec=True) as send_method:
+            resp = response.Response(None, None)
+            send_method.return_value = resp
+
+            req = request.Request()
+            core.pool_update(self.transport, req,
+                             'test_pool', {'uri': 'sqlite://',
+                                           'weight': 20})
+
+            self.assertEqual('test_pool', req.params['pool_name'])
+
+    def test_pool_list(self):
+        with mock.patch.object(self.transport, 'send',
+                               autospec=True) as send_method:
+            resp = response.Response(None, None)
+            send_method.return_value = resp
+
+            req = request.Request()
+            core.pool_list(self.transport, req, detail=True,
+                           limit=10, marker="111222333")
+
+            self.assertTrue(req.params['detail'])
+            self.assertEqual(10, req.params['limit'])
+            self.assertEqual('111222333', req.params['marker'])
+
     def test_health(self):
         with mock.patch.object(self.transport, 'send',
                                autospec=True) as send_method:

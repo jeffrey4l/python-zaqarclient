@@ -138,6 +138,16 @@ class Client(object):
         """
         return pool.Pool(self, ref, **kwargs)
 
+    def pools(self, **params):
+        req, trans = self._request_and_transport()
+
+        pool_list = core.pool_list(trans, req, **params)
+
+        return iterator._Iterator(self,
+                                  pool_list or [],
+                                  'pools',
+                                  pool.create_object(self))
+
     @decorators.version(min_version=1.1)
     def flavor(self, ref, **kwargs):
         """Returns a flavor instance

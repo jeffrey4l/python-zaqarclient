@@ -172,6 +172,35 @@ class V1(api.Api):
             }
         },
 
+        'pool_get': {
+            'ref': 'pools/{pool_name}',
+            'method': 'GET',
+            'required': ['pool_name'],
+            'properties': {
+                'pool_name': {'type': 'string'},
+                'detailed': {'type': 'boolean'},
+            }
+        },
+
+        'pool_update': {
+            'ref': 'pools/{pool_name}',
+            'method': 'PATCH',
+            'required': ['pool_name'],
+            'properties': {
+                'pool_name': {'type': 'string'},
+            }
+        },
+
+        'pool_list': {
+            'ref': 'pools',
+            'method': 'GET',
+            'properties': {
+                'detail': {'type': 'boolean'},
+                'limit': {'type': 'integer'},
+                'marker': {'type': 'string'},
+            }
+        },
+
         'flavor_create': {
             'ref': 'flavors/{flavor_name}',
             'method': 'PUT',

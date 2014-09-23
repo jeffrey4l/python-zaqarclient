@@ -453,6 +453,29 @@ def pool_delete(transport, request, pool_name):
     transport.send(request)
 
 
+def pool_get(transport, request, pool_name, detail=False):
+    request.operation = 'pool_get'
+    request.params['pool_name'] = pool_name
+    request.params['detail'] = detail
+    resp = transport.send(request)
+    return resp.deserialized_content
+
+
+def pool_update(transport, request, pool_name, pool_data):
+    request.operation = 'pool_update',
+    request.params['pool_name'] = pool_name
+    request.content = json.dumps(pool_data)
+    resp = transport.send(request)
+    return resp.deserialized_content
+
+
+def pool_list(transport, request, **kwargs):
+    request.operation = 'pool_list'
+    request.params.update(kwargs)
+    resp = transport.send(request)
+    return resp.deserialized_content
+
+
 def flavor_create(transport, request, name, flavor_data):
     """Creates a flavor called `name`
 

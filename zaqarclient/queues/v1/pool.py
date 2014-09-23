@@ -20,7 +20,8 @@ class Pool(object):
 
     def __init__(self, client, name,
                  weight=None, uri=None,
-                 auto_create=True, **options):
+                 auto_create=True, href=None,
+                 **options):
         self.client = client
 
         self.uri = uri
@@ -49,3 +50,7 @@ class Pool(object):
     def delete(self):
         req, trans = self.client._request_and_transport()
         core.pool_delete(trans, req, self.name)
+
+
+def create_object(parent):
+    return lambda args: Pool(parent, **args)
