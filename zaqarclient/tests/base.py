@@ -40,8 +40,8 @@ class TestBase(testtools.TestCase):
 
         # NOTE(kgriffs): Don't monkey-patch stdout since it breaks
         # debugging with pdb.
-        stderr = self.useFixture(fixtures.StringStream('stderr')).stream
-        self.useFixture(fixtures.MonkeyPatch('sys.stderr', stderr))
+#        stderr = self.useFixture(fixtures.StringStream('stderr')).stream
+#        self.useFixture(fixtures.MonkeyPatch('sys.stderr', stderr))
 
         if not _RUN_FUNCTIONAL and self.is_functional:
             self.skipTest('Functional tests disabled')
